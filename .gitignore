@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+.turbo/
+out/
+
+# Env files
+.env
+.env.local
+backend/.env
+frontend/.env.local
+
+# Docker
+*.override.yml
+
+# Misc
+.DS_Store
+*.log
+ssl/

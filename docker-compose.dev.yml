@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - ./backend:/app
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "true"
+      LOG_FORMAT: console
+
+  frontend:
+    volumes:
+      - ./frontend/src:/app/src
