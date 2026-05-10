@@ -3,11 +3,12 @@ import os
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
-from app.config import get_settings
 import structlog
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
+
 _database_url = os.getenv("DATABASE_URL")
 engine = None
 AsyncSessionLocal = None
@@ -20,7 +21,7 @@ class Base(DeclarativeBase):
 if _database_url:
     engine = create_async_engine(
         _database_url,
-        echo=settings.DEBUG,
+        echo=DEBUG,
         pool_size=10,
         max_overflow=20,
         pool_pre_ping=True,

@@ -1,11 +1,11 @@
 import os
 
 from neo4j import AsyncGraphDatabase, AsyncDriver
-from app.config import get_settings
 import structlog
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+AUTO_CREATE_INDEXES = os.environ.get('AUTO_CREATE_INDEXES', 'true').lower() == 'true'
 
 _driver: AsyncDriver | None = None
 
@@ -113,7 +113,7 @@ async def get_incident_neighbors(node_id: str, depth: int = 2) -> dict:
 
 
 async def setup_constraints() -> None:
-    if not settings.AUTO_CREATE_INDEXES:
+    if not AUTO_CREATE_INDEXES:
         return
     queries = [
         "CREATE CONSTRAINT incident_node_id IF NOT EXISTS FOR (i:Incident) REQUIRE i.node_id IS UNIQUE",

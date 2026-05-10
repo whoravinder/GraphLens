@@ -1,9 +1,11 @@
 from sentence_transformers import CrossEncoder
-from app.config import get_settings
+import os
 import structlog
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+RERANKER_MODEL = os.environ.get('RERANKER_MODEL', 'BAAI/bge-reranker-base')
+TOP_K_RERANK = int(os.environ.get('TOP_K_RERANK', '4'))
 
 _reranker: CrossEncoder | None = None
 
@@ -11,15 +13,15 @@ _reranker: CrossEncoder | None = None
 def get_reranker() -> CrossEncoder:
     global _reranker
     if _reranker is None:
-        _reranker = CrossEncoder(settings.RERANKER_MODEL)
-        logger.info("reranker_loaded", model=settings.RERANKER_MODEL)
+        _reranker = CrossEncoder(RERANKER_MODEL)
+        logger.info("reranker_loaded", model=RERANKER_MODEL)
     return _reranker
 
 
 def rerank(query: str, documents: list[dict], top_k: int | None = None) -> list[dict]:
     if not documents:
         return documents
-    k = top_k if top_k is not None else settings.TOP_K_RERANK
+    k = top_k if top_k is not None else TOP_K_RERANK
     reranker = get_reranker()
     pairs = [(query, doc.get("content", "") or doc.get("title", "")) for doc in documents]
     scores = reranker.predict(pairs)

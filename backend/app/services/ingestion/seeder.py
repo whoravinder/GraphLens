@@ -1,12 +1,13 @@
 import asyncio
+import os
 import structlog
-from app.config import get_settings
 from app.services.rag.vector_store import get_collection_stats, ensure_collection
 from app.services.ingestion.cisa import ingest_cisa_kev, ingest_mitre_attack
 from app.services.ingestion.nvd import ingest_nvd_cves
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+AUTO_SEED_ON_STARTUP = os.environ.get('AUTO_SEED_ON_STARTUP', 'true').lower() == 'true'
 
 _seeding_in_progress = False
 _seeded = False
@@ -70,7 +71,7 @@ async def seed_knowledge_base() -> None:
 
 
 async def run_seed_in_background() -> None:
-    if not settings.AUTO_SEED_ON_STARTUP:
+    if not AUTO_SEED_ON_STARTUP:
         logger.info("auto_seed_disabled", reason="AUTO_SEED_ON_STARTUP=false")
         return
     asyncio.create_task(seed_knowledge_base())

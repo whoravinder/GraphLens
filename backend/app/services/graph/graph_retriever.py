@@ -1,15 +1,19 @@
 import re
-from app.config import get_settings
+import os
 from app.services.graph.neo4j_client import run_query
 import structlog
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+ENABLE_GRAPHRAG = os.environ.get('ENABLE_GRAPHRAG', 'true').lower() == 'true'
+GRAPH_MAX_DEPTH = int(os.environ.get('GRAPH_MAX_DEPTH', '3'))
+GRAPH_MAX_RELATIONS = int(os.environ.get('GRAPH_MAX_RELATIONS', '25'))
+MAX_GRAPH_NODES = int(os.environ.get('MAX_GRAPH_NODES', '50'))
 
 
 class GraphRetriever:
     async def get_context_for_input(self, input_text: str) -> dict:
-        if not settings.ENABLE_GRAPHRAG:
+        if not ENABLE_GRAPHRAG:
             return {"nodes": [], "relationships": [], "summary": "GraphRAG disabled"}
 
         cve_ids = re.findall(r"CVE-\d{4}-\d+", input_text, re.IGNORECASE)
@@ -22,7 +26,7 @@ class GraphRetriever:
         for cve_id in cve_ids[:3]:
             try:
                 records = await run_query(
-                    f"MATCH (c:CVE {{cve_id: $cve_id}})-[r]-(n) RETURN c, r, n LIMIT {settings.GRAPH_MAX_RELATIONS}",
+                    f"MATCH (c:CVE {{cve_id: $cve_id}})-[r]-(n) RETURN c, r, n LIMIT {GRAPH_MAX_RELATIONS}",
                     {"cve_id": cve_id.upper()},
                 )
                 for rec in records:
@@ -52,8 +56,8 @@ class GraphRetriever:
             logger.warning("graph_recent_incidents_failed", error=str(exc))
 
         return {
-            "nodes": nodes[:settings.MAX_GRAPH_NODES],
-            "relationships": relationships[:settings.GRAPH_MAX_RELATIONS],
+            "nodes": nodes[:MAX_GRAPH_NODES],
+            "relationships": relationships[:GRAPH_MAX_RELATIONS],
             "cves_found": cve_ids,
             "ip_addresses_found": ip_addresses[:10],
             "summary": "; ".join(summary_parts) if summary_parts else "No matching graph entities found",
@@ -66,8 +70,8 @@ class GraphRetriever:
         limit: int | None = None,
         node_types: list[str] | None = None,
     ) -> dict:
-        safe_depth = min(depth if depth is not None else settings.GRAPH_MAX_DEPTH, settings.GRAPH_MAX_DEPTH)
-        safe_limit = min(limit if limit is not None else settings.GRAPH_MAX_RELATIONS, settings.MAX_GRAPH_NODES)
+        safe_depth = min(depth if depth is not None else GRAPH_MAX_DEPTH, GRAPH_MAX_DEPTH)
+        safe_limit = min(limit if limit is not None else GRAPH_MAX_RELATIONS, MAX_GRAPH_NODES)
 
         if re.match(r"^\s*MATCH", query, re.IGNORECASE):
             cypher = query
@@ -115,10 +119,10 @@ class GraphRetriever:
                     "properties": dict(rel),
                 })
 
-        node_list = list(nodes_set.values())[:settings.MAX_GRAPH_NODES]
+        node_list = list(nodes_set.values())[:MAX_GRAPH_NODES]
         return {
             "nodes": node_list,
-            "relationships": rels_list[:settings.GRAPH_MAX_RELATIONS],
+            "relationships": rels_list[:GRAPH_MAX_RELATIONS],
             "total_nodes": len(node_list),
             "total_relationships": len(rels_list),
             "query_used": cypher,

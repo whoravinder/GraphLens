@@ -1,17 +1,19 @@
 import httpx
+import os
 import structlog
-from app.config import get_settings
 from app.services.rag.vector_store import upsert_documents
 import uuid
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+CISA_KEV_URL = os.environ.get('CISA_KEV_URL', 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json')
+MITRE_ATTACK_URL = os.environ.get('MITRE_ATTACK_URL', 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json')
 
 
 async def ingest_cisa_kev() -> int:
     async with httpx.AsyncClient(timeout=60) as client:
         try:
-            response = await client.get(settings.CISA_KEV_URL)
+            response = await client.get(CISA_KEV_URL)
             response.raise_for_status()
             data = response.json()
         except Exception as exc:
@@ -48,7 +50,7 @@ async def ingest_cisa_kev() -> int:
 async def ingest_mitre_attack() -> int:
     async with httpx.AsyncClient(timeout=120) as client:
         try:
-            response = await client.get(settings.MITRE_ATTACK_URL)
+            response = await client.get(MITRE_ATTACK_URL)
             response.raise_for_status()
             data = response.json()
         except Exception as exc:

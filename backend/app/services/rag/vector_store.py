@@ -10,13 +10,15 @@ from qdrant_client.models import (
     MatchValue,
     SearchRequest as QdrantSearchRequest,
 )
-from app.config import get_settings
 from app.services.llm.client import embed_query, embed_texts
 import structlog
 import uuid
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+QDRANT_COLLECTION = os.environ.get('QDRANT_COLLECTION', 'graphlens_incidents')
+AUTO_CREATE_COLLECTIONS = os.environ.get('AUTO_CREATE_COLLECTIONS', 'true').lower() == 'true'
+EMBEDDING_DIMENSIONS = int(os.environ.get('EMBEDDING_DIMENSIONS', '1536'))
 
 _client: AsyncQdrantClient | None = None
 
@@ -32,16 +34,16 @@ def get_qdrant_client() -> AsyncQdrantClient:
 
 
 async def ensure_collection() -> None:
-    if not settings.AUTO_CREATE_COLLECTIONS:
+    if not AUTO_CREATE_COLLECTIONS:
         return
     client = get_qdrant_client()
     collections = await client.get_collections()
     names = [c.name for c in collections.collections]
-    collection_name = os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION)
+    collection_name = QDRANT_COLLECTION
     if collection_name not in names:
         await client.create_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=settings.EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
         )
         logger.info("qdrant_collection_created", name=collection_name)
 
@@ -69,7 +71,7 @@ async def upsert_documents(documents: list[dict]) -> int:
         for doc, vector in zip(documents, vectors)
     ]
 
-    await client.upsert(collection_name=os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION), points=points)
+    await client.upsert(collection_name=QDRANT_COLLECTION, points=points)
     logger.info("qdrant_upsert_complete", count=len(points))
     return len(points)
 
@@ -87,7 +89,7 @@ async def semantic_search(query: str, top_k: int = 10, filters: dict | None = No
             qdrant_filter = Filter(must=conditions)
 
     results = await client.query_points(
-        collection_name=os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION),
+        collection_name=QDRANT_COLLECTION,
         query=vector,
         limit=top_k,
         query_filter=qdrant_filter,
@@ -109,7 +111,7 @@ async def semantic_search(query: str, top_k: int = 10, filters: dict | None = No
 
 
 async def get_collection_stats() -> dict:
-    collection_name = os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION)
+    collection_name = QDRANT_COLLECTION
     try:
         client = get_qdrant_client()
         info = await client.get_collection(collection_name)

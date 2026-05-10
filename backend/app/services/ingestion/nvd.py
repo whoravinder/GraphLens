@@ -1,23 +1,25 @@
 import httpx
+import os
 import structlog
-from app.config import get_settings
 from app.services.rag.vector_store import upsert_documents
 from app.services.graph.neo4j_client import create_cve_node
 import uuid
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+NVD_API_KEY = os.environ.get('NVD_API_KEY', '')
+NVD_BASE_URL = os.environ.get('NVD_BASE_URL', 'https://services.nvd.nist.gov/rest/json/cves/2.0')
 
 
 async def ingest_nvd_cves(keyword: str = "network", results_per_page: int = 20) -> int:
     params = {"keywordSearch": keyword, "resultsPerPage": results_per_page}
     headers = {}
-    if settings.NVD_API_KEY:
-        headers["apiKey"] = settings.NVD_API_KEY
+    if NVD_API_KEY:
+        headers["apiKey"] = NVD_API_KEY
 
     async with httpx.AsyncClient(timeout=60) as client:
         try:
-            response = await client.get(settings.NVD_BASE_URL, params=params, headers=headers)
+            response = await client.get(NVD_BASE_URL, params=params, headers=headers)
             response.raise_for_status()
             data = response.json()
         except Exception as exc:

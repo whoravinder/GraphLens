@@ -1,14 +1,16 @@
 import json
+import os
 import structlog
 from app.services.agents.state import AgentState
 from app.services.llm.client import get_llm
 from app.services.llm.prompts import RETRIEVAL_QUERY_PROMPT, ANALYSIS_PROMPT, VALIDATION_PROMPT, SUMMARIZATION_PROMPT
 from app.services.rag.hybrid_retriever import HybridRetriever
 from app.services.graph.graph_retriever import GraphRetriever
-from app.config import get_settings
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+MAX_CONTEXT_DOCUMENTS = int(os.environ.get('MAX_CONTEXT_DOCUMENTS', '20'))
+ENABLE_GRAPHRAG = os.environ.get('ENABLE_GRAPHRAG', 'true').lower() == 'true'
 
 
 async def retrieval_node(state: AgentState) -> dict:
@@ -40,18 +42,18 @@ async def retrieval_node(state: AgentState) -> dict:
                 if doc_id not in seen_ids:
                     all_docs.append(doc)
                     seen_ids.add(doc_id)
-                    if len(all_docs) >= settings.MAX_CONTEXT_DOCUMENTS:
+                    if len(all_docs) >= MAX_CONTEXT_DOCUMENTS:
                         break
         except Exception as exc:
             logger.warning("retrieval_failed", query=query, error=str(exc))
-        if len(all_docs) >= settings.MAX_CONTEXT_DOCUMENTS:
+        if len(all_docs) >= MAX_CONTEXT_DOCUMENTS:
             break
 
     return {"optimized_queries": queries, "retrieved_docs": all_docs, "step_count": 1}
 
 
 async def graph_node(state: AgentState) -> dict:
-    if not settings.ENABLE_GRAPHRAG:
+    if not ENABLE_GRAPHRAG:
         return {"graph_context": {"nodes": [], "relationships": [], "summary": "GraphRAG disabled"}, "step_count": 1}
     try:
         graph_retriever = GraphRetriever()
@@ -66,7 +68,7 @@ async def analysis_node(state: AgentState) -> dict:
     llm = get_llm()
     chain = ANALYSIS_PROMPT | llm
 
-    docs = state["retrieved_docs"][:settings.MAX_CONTEXT_DOCUMENTS]
+    docs = state["retrieved_docs"][:MAX_CONTEXT_DOCUMENTS]
     context_str = "\n\n".join([
         f"[{i+1}] {doc.get('title', 'Unknown')} ({doc.get('source', '')})\n{doc.get('content', '')[:500]}"
         for i, doc in enumerate(docs)

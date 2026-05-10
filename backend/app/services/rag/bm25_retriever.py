@@ -1,11 +1,12 @@
 from rank_bm25 import BM25Okapi
 import re
 import structlog
+import os
 from app.services.rag.vector_store import get_qdrant_client
-from app.config import get_settings
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+QDRANT_COLLECTION = os.environ.get('QDRANT_COLLECTION', 'graphlens_incidents')
 
 _corpus: list[dict] = []
 _bm25: BM25Okapi | None = None
@@ -22,7 +23,7 @@ async def refresh_bm25_index() -> None:
     try:
         client = get_qdrant_client()
         records, _ = await client.scroll(
-            collection_name=settings.QDRANT_COLLECTION,
+            collection_name=QDRANT_COLLECTION,
             limit=10000,
             with_payload=True,
             with_vectors=False,

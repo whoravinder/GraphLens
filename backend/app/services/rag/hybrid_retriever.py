@@ -1,10 +1,14 @@
 from app.services.rag.vector_store import semantic_search
 from app.services.rag.bm25_retriever import bm25_search
-from app.config import get_settings
+import os
 import structlog
 
 logger = structlog.get_logger(__name__)
-settings = get_settings()
+
+ENABLE_RERANKING = os.environ.get('ENABLE_RERANKING', 'true').lower() == 'true'
+TOP_K_RERANK = int(os.environ.get('TOP_K_RERANK', '4'))
+TOP_K_RETRIEVAL = int(os.environ.get('TOP_K_RETRIEVAL', '8'))
+ENABLE_BM25 = os.environ.get('ENABLE_BM25', 'true').lower() == 'true'
 
 
 def rrf_score(rank: int, k: int = 60) -> float:
@@ -33,14 +37,14 @@ def reciprocal_rank_fusion(results_lists: list[list[dict]], top_k: int) -> list[
 
 
 async def _apply_reranking(query: str, documents: list[dict]) -> list[dict]:
-    if not settings.ENABLE_RERANKING or not documents:
+    if not ENABLE_RERANKING or not documents:
         return documents
     try:
         from app.services.rag.reranker import rerank
-        return rerank(query, documents, top_k=settings.TOP_K_RERANK)
+        return rerank(query, documents, top_k=TOP_K_RERANK)
     except Exception as exc:
         logger.warning("reranking_failed", error=str(exc))
-        return documents[:settings.TOP_K_RERANK]
+        return documents[:TOP_K_RERANK]
 
 
 class HybridRetriever:
@@ -51,14 +55,14 @@ class HybridRetriever:
         search_type: str = "hybrid",
         filters: dict | None = None,
     ) -> list[dict]:
-        k = top_k if top_k is not None else settings.TOP_K_RETRIEVAL
+        k = top_k if top_k is not None else TOP_K_RETRIEVAL
 
         if search_type == "semantic":
             results = await semantic_search(query, top_k=k, filters=filters)
             return await _apply_reranking(query, results)
 
         if search_type == "keyword":
-            if not settings.ENABLE_BM25:
+            if not ENABLE_BM25:
                 return await semantic_search(query, top_k=k, filters=filters)
             results = await bm25_search(query, top_k=k)
             return await _apply_reranking(query, results)
@@ -71,7 +75,7 @@ class HybridRetriever:
         except Exception as exc:
             logger.warning("semantic_search_failed", error=str(exc))
 
-        if settings.ENABLE_BM25:
+        if ENABLE_BM25:
             try:
                 bm25_results = await bm25_search(query, top_k=k)
             except Exception as exc:
@@ -80,7 +84,7 @@ class HybridRetriever:
         if not semantic_results and not bm25_results:
             return []
 
-        if not bm25_results or not settings.ENABLE_BM25:
+        if not bm25_results or not ENABLE_BM25:
             fused = semantic_results[:k]
         elif not semantic_results:
             fused = bm25_results[:k]

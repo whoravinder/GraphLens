@@ -1,5 +1,6 @@
 import json
 import time
+import os
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,12 +9,12 @@ from app.models.schemas.analysis import AnalysisRequest
 from app.services.incident_service import analyze_incident
 from app.services.agents.workflow import stream_analysis_workflow
 from app.core.responses import success_response
-from app.config import get_settings
 import structlog
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
-settings = get_settings()
+
+ENABLE_STREAMING = os.environ.get('ENABLE_STREAMING', 'true').lower() == 'true'
 
 
 @router.post("", summary="Analyze incident, log, alert, or CVE")
@@ -21,7 +22,7 @@ async def analyze(
     request: AnalysisRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    wants_stream = request.stream and settings.ENABLE_STREAMING
+    wants_stream = request.stream and ENABLE_STREAMING
 
     if wants_stream:
         async def event_generator():

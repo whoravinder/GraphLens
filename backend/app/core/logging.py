@@ -1,13 +1,14 @@
 import structlog
 import logging
 import sys
-from app.config import get_settings
+import os
 
-settings = get_settings()
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+LOG_FORMAT = os.environ.get('LOG_FORMAT', 'json')
 
 
 def configure_logging() -> None:
-    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    log_level = getattr(logging, LOG_LEVEL.upper(), logging.INFO)
 
     shared_processors = [
         structlog.contextvars.merge_contextvars,
@@ -17,7 +18,7 @@ def configure_logging() -> None:
         structlog.processors.StackInfoRenderer(),
     ]
 
-    if settings.LOG_FORMAT == "json":
+    if LOG_FORMAT == "json":
         processors = shared_processors + [
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(),

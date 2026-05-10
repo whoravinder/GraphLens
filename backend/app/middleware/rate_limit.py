@@ -3,13 +3,13 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request
 from fastapi.responses import ORJSONResponse
-from app.config import get_settings
+import os
 
-settings = get_settings()
+RATE_LIMIT_PER_MINUTE = int(os.environ.get('RATE_LIMIT_PER_MINUTE', '60'))
 
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"],
+    default_limits=[f"{RATE_LIMIT_PER_MINUTE}/minute"],
 )
 
 
