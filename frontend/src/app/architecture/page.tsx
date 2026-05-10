@@ -33,7 +33,7 @@ export default function ArchitecturePage() {
           GraphLens AI is built on a highly modular, event-driven microservices architecture. The core backend relies on <strong>FastAPI</strong> to expose a RESTful interface, securely proxying requests to the AI reasoning engine.
         </p>
         <p className="text-muted-foreground leading-relaxed">
-          The intelligence layer uses <strong>LangGraph</strong> to define an autonomous agent workflow. When an incident report arrives, the system doesn't just pass it to an LLM. Instead, the input is parsed and routed through a <strong>Hybrid RAG</strong> pipeline:
+          The intelligence layer uses <strong>LangGraph</strong> to define an autonomous agent workflow. When an incident report arrives, the system does not just pass it to an LLM. Instead, the input is parsed and routed through a <strong>Hybrid RAG</strong> pipeline:
         </p>
         <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
           <li><strong>Vector Retrieval:</strong> Queries <strong>Qdrant</strong> using OpenAI embeddings to find semantically similar CVEs and attack patterns.</li>
@@ -76,8 +76,7 @@ export default function ArchitecturePage() {
           <li><strong>postgres:</strong> Persistent relational storage (Port 5432)</li>
           <li><strong>neo4j:</strong> Graph database (Port 7474 / 7687)</li>
           <li><strong>qdrant:</strong> Vector database (Port 6333)</li>
-          <li><strong>redis:</strong> Caching & message brokering (Port 6379)</li>
-          <li><strong>nginx:</strong> Reverse proxy routing <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary">/api/*</code> to the backend and <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary">/*</code> to the frontend (Port 80)</li>
+          <li><strong>nginx:</strong> Reverse proxy routing <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary">/api/:path*</code> to the backend and <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary">/</code> to the frontend (Port 80)</li>
         </ul>
       </section>
     </div>

@@ -1,3 +1,5 @@
+import os
+
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
     Distance,
@@ -22,7 +24,10 @@ _client: AsyncQdrantClient | None = None
 def get_qdrant_client() -> AsyncQdrantClient:
     global _client
     if _client is None:
-        _client = AsyncQdrantClient(url=settings.QDRANT_URL, timeout=30)
+        qdrant_url = os.getenv("QDRANT_URL")
+        if not qdrant_url:
+            raise RuntimeError("QDRANT_URL environment variable is required")
+        _client = AsyncQdrantClient(url=qdrant_url, timeout=30)
     return _client
 
 
@@ -32,12 +37,13 @@ async def ensure_collection() -> None:
     client = get_qdrant_client()
     collections = await client.get_collections()
     names = [c.name for c in collections.collections]
-    if settings.QDRANT_COLLECTION not in names:
+    collection_name = os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION)
+    if collection_name not in names:
         await client.create_collection(
-            collection_name=settings.QDRANT_COLLECTION,
+            collection_name=collection_name,
             vectors_config=VectorParams(size=settings.EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
         )
-        logger.info("qdrant_collection_created", name=settings.QDRANT_COLLECTION)
+        logger.info("qdrant_collection_created", name=collection_name)
 
 
 async def upsert_documents(documents: list[dict]) -> int:
@@ -63,7 +69,7 @@ async def upsert_documents(documents: list[dict]) -> int:
         for doc, vector in zip(documents, vectors)
     ]
 
-    await client.upsert(collection_name=settings.QDRANT_COLLECTION, points=points)
+    await client.upsert(collection_name=os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION), points=points)
     logger.info("qdrant_upsert_complete", count=len(points))
     return len(points)
 
@@ -81,7 +87,7 @@ async def semantic_search(query: str, top_k: int = 10, filters: dict | None = No
             qdrant_filter = Filter(must=conditions)
 
     results = await client.query_points(
-        collection_name=settings.QDRANT_COLLECTION,
+        collection_name=os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION),
         query=vector,
         limit=top_k,
         query_filter=qdrant_filter,
@@ -103,17 +109,16 @@ async def semantic_search(query: str, top_k: int = 10, filters: dict | None = No
 
 
 async def get_collection_stats() -> dict:
-    client = get_qdrant_client()
+    collection_name = os.getenv("QDRANT_COLLECTION", settings.QDRANT_COLLECTION)
     try:
-        info = await client.get_collection(settings.QDRANT_COLLECTION)
+        client = get_qdrant_client()
+        info = await client.get_collection(collection_name)
         return {
-            "name": settings.QDRANT_COLLECTION,
+            "name": collection_name,
             "vectors_count": getattr(info, "vectors_count", info.points_count),
             "indexed_vectors_count": info.indexed_vectors_count,
             "points_count": info.points_count,
             "status": str(info.status),
         }
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"name": settings.QDRANT_COLLECTION, "status": "unavailable"}
+    except Exception:
+        return {"name": collection_name, "status": "unavailable"}

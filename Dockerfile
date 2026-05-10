@@ -31,7 +31,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl nginx supervisor ca-certificates \
+    curl nginx supervisor ca-certificates gettext-base \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
@@ -47,8 +47,9 @@ COPY --from=frontend-builder /app/frontend/.next/standalone /app/frontend/
 COPY --from=frontend-builder /app/frontend/public /app/frontend/public
 COPY --from=frontend-builder /app/frontend/.next/static /app/frontend/.next/static
 
-COPY nginx.cloudrun.conf /etc/nginx/nginx.conf
+COPY nginx.cloudrun.conf.template /etc/nginx/nginx.conf.template
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY scripts/cloudrun-entrypoint.sh /usr/local/bin/cloudrun-entrypoint.sh
 
 # Environment Variables
 ENV NODE_ENV=production
@@ -56,4 +57,4 @@ ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 
 EXPOSE 8080
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/local/bin/cloudrun-entrypoint.sh"]
