@@ -4,7 +4,7 @@ from typing import Literal
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
+    model_config = SettingsConfigDict(env_ignore_empty=True, extra="ignore")
 
     APP_NAME: str = "GraphLens AI"
     APP_VERSION: str = "1.0.0"
@@ -14,15 +14,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
     WORKERS: int = 1
 
-    DATABASE_URL: str
-    REDIS_URL: str
-
-    QDRANT_URL: str
     QDRANT_COLLECTION: str = "graphlens_incidents"
-
-    NEO4J_URI: str
-    NEO4J_USER: str
-    NEO4J_PASSWORD: str
 
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"

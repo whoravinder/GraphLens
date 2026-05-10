@@ -1,3 +1,5 @@
+import os
+
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from app.config import get_settings
 import structlog
@@ -11,9 +13,14 @@ _driver: AsyncDriver | None = None
 def get_driver() -> AsyncDriver:
     global _driver
     if _driver is None:
+        neo4j_uri = os.getenv("NEO4J_URI")
+        neo4j_user = os.getenv("NEO4J_USER")
+        neo4j_password = os.getenv("NEO4J_PASSWORD")
+        if not neo4j_uri or not neo4j_user or not neo4j_password:
+            raise RuntimeError("NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD environment variables are required")
         _driver = AsyncGraphDatabase.driver(
-            settings.NEO4J_URI,
-            auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD),
+            neo4j_uri,
+            auth=(neo4j_user, neo4j_password),
             max_connection_pool_size=50,
         )
     return _driver
