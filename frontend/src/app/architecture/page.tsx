@@ -76,6 +76,7 @@ export default function ArchitecturePage() {
           <li><strong>postgres:</strong> Persistent relational storage (Port 5432)</li>
           <li><strong>neo4j:</strong> Graph database (Port 7474 / 7687)</li>
           <li><strong>qdrant:</strong> Vector database (Port 6333)</li>
+          <li><strong>redis:</strong> Caching & message brokering (Port 6379)</li>
           <li><strong>nginx:</strong> Reverse proxy routing <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary">/api/:path*</code> to the backend and <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary">/</code> to the frontend (Port 80)</li>
         </ul>
       </section>
