@@ -1,6 +1,6 @@
 # GraphLens AI
 
-[![Demo](https://img.shields.io/badge/Demo-Live-blue)](https://graphlens-374538717119.asia-south1.run.app/)
+
 
 GraphLens AI is a comprehensive Network & Incident Intelligence Platform that leverages graph databases, large language models, and advanced retrieval-augmented generation (RAG) techniques to provide deep insights into cybersecurity incidents, network topologies, and threat analysis.
 
